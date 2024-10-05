@@ -1,7 +1,5 @@
-from SudoCoin import BlockChain; 
-
+from SudoCoin import BlockChain;
 blockchain = BlockChain()
-
 print("***Mining fccCoin about to start***")
 print(blockchain.chain)
 
