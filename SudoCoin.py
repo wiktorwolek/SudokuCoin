@@ -1,5 +1,6 @@
 import hashlib
 import time
+import json
 from SudokuHasher import *
 
 class Block:
@@ -22,14 +23,40 @@ class Block:
         return "{} - {} - {} - {} - {}".format(self.index, self.proof_no,
                                                self.prev_hash, self.data,
                                                self.timestamp)
-
+    def toJSON(self):
+        return json.dumps(self, default=lambda o: o.__dict__)
+    @staticmethod
+    def fromJSON(json_str):
+        # Load a Block from a JSON string
+        data = json.loads(json_str)
+        return Block(
+            index=data['index'],
+            proof_no=data['proof_no'],
+            prev_hash=data['prev_hash'],
+            data=data['data'],
+            timestamp=data['timestamp']
+        )
 
 class BlockChain:
+    def toJSON(self):
+        # Convert the entire blockchain to JSON format
+        return json.dumps({
+            'chain': [block.toJSON() for block in self.chain]
+        })
+    @staticmethod
+    def fromJSON(json_str):
+        # Load a BlockChain from a JSON string
+        data = json.loads(json_str)
+        blockchain = BlockChain()
+        # Recreate the blocks
+        for block_data in data['chain']:
+            block = Block.fromJSON(block_data)
+            blockchain.chain.append(block)
 
+        return blockchain
     def __init__(self):
         self.chain = []
         self.current_data = []
-        self.nodes = set()
         self.construct_genesis()
 
     def construct_genesis(self):
@@ -115,10 +142,6 @@ class BlockChain:
         block = self.construct_block(proof_no, last_hash)
 
         return vars(block)
-
-    def create_node(self, address):
-        self.nodes.add(address)
-        return True
 
     @staticmethod
     def obtain_block_object(block_data):

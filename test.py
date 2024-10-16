@@ -1,4 +1,5 @@
 from SudoCoin import BlockChain;
+import json
 blockchain = BlockChain()
 print("***Mining fccCoin about to start***")
 print(blockchain.chain)
@@ -8,10 +9,10 @@ last_proof_no = last_block.proof_no
 proof_no = blockchain.proof_of_work(last_proof_no)
 
 blockchain.new_data(
-    sender="0",  #it implies that this node has created a new block
-    recipient="Quincy Larson",  #let's send Quincy some coins!
+    sender="0",  
+    recipient="Quincy Larson",  
     quantity=
-    1,  #creating a new block (or identifying the proof number) is awarded with 1
+    1, 
 )
 
 last_hash = last_block.calculate_hash
@@ -21,3 +22,5 @@ print("***Mining fccCoin has been successful***")
 print(blockchain.chain)
 print('last hash')
 print(block.calculate_hash)
+json = blockchain.toJSON()
+
