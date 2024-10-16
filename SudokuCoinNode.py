@@ -1,6 +1,6 @@
 import threading
 import argparse
-
+from HttpClient import runServer
 from P2P import *
 from SudoCoin import *
 
@@ -10,6 +10,11 @@ def getJsonChain():
     return chain.toJSON()
 def getInitialMessage():
     return json.dumps({"messagetype" : "initialChain" , "payload" : chain.toJSON()})
+
+
+def httpRequestHandler(msg):
+    print(msg)
+
 def messageRecivedHandler(msg):
     try:
         jsonmsg = json.loads(msg)
@@ -38,14 +43,15 @@ if __name__ == "__main__":
     args = parser.parse_args()
     host = '127.0.0.1'  # You can change this to the actual IP address if running on different machines
     port = args.port
-
+    http_thread = threading.Thread(target=runServer,args=(port+1000,httpRequestHandler,))
+    http_thread.start()
     # Start the server
     server_thread = threading.Thread(target=start_server, args=(host, port, getInitialMessage, messageRecivedHandler))
     server_thread.start()
     if not args.peers:
         print("[SERVER] Initial node")
         nodeInitialized = True;
-        
+    
     # Connect to multiple peers
     if args.peers:
         for peer in args.peers:
@@ -59,4 +65,5 @@ if __name__ == "__main__":
 
     # Wait for the server thread to finish
     server_thread.join()
+    http_thread.join()
     print(f"[INFO] Peer-to-peer network shutdown complete.")
