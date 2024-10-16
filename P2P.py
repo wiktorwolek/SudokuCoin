@@ -5,7 +5,7 @@ import argparse
 peers = []
 
 # Server function to listen for incoming connections
-def start_server(host, port,getInitialMessage):
+def start_server(host, port, getInitialMessage,messageRecivedHandler):
     server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     server.bind((host, port))
     server.listen(5)
@@ -16,15 +16,15 @@ def start_server(host, port,getInitialMessage):
         print(f"[SERVER] Connected to {addr}")
         peers.append(conn)
         send_message(conn, getInitialMessage())
-        threading.Thread(target=handle_peer, args=(conn,)).start()
+        threading.Thread(target=handle_peer, args=(conn,messageRecivedHandler)).start()
 
 # Function to handle communication with a peer
-def handle_peer(conn):
+def handle_peer(conn,message_recived_handler):
     while True:
         try:
             msg = conn.recv(1024).decode('utf-8')
             if msg:
-                print(f"[PEER] {msg}")
+                message_recived_handler(msg)
                 # Send the message to all connected peers
                 broadcast(msg, conn)
         except:
@@ -42,10 +42,10 @@ def broadcast(msg, sender_conn):
                 peers.remove(peer)
 
 # Client function to connect to a peer
-def connect_to_peer(host, port):
+def connect_to_peer(host, port,messageRecivedHandler):
     client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     client.connect((host, port))
-    threading.Thread(target=handle_peer, args=(client,)).start()
+    threading.Thread(target=handle_peer, args=(client,messageRecivedHandler)).start()
     return client
 
 # Function to send messages to peers

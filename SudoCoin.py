@@ -72,7 +72,11 @@ class BlockChain:
 
         self.chain.append(block)
         return block
-
+    def check_chain_validity(self):
+        for i in range(1,len(self.chain)):
+            if not BlockChain.check_validity(self.chain[i],self.chain[i-1]):
+                return False
+        return True
     @staticmethod
     def check_validity(block, prev_block):
         if prev_block.index + 1 != block.index:
