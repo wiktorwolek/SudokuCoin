@@ -7,7 +7,7 @@ from Wallet import Wallet
 from Crypto.PublicKey import RSA 
 from Crypto.Signature import PKCS1_v1_5 
 from Crypto.Hash import SHA512
-from base64 import b64decode 
+from base64 import b64decode, b64encode
 
 class User:
     def __init__(self, host, port, getInitialMessage, messageRecivedHandler):
@@ -21,26 +21,33 @@ nodeInitialized = False
 chain = BlockChain()       
 def getJsonChain():
     return chain.toJSON()
-def getInitialMessage():
-    signature = sign_msg(chain.toJSON(), priv_key)
 
-    return json.dumps({"messagetype" : "initialChain" , "payload" : chain.toJSON(), "signature": jakaś funkca z podpisem, })
+def getInitialMessage(private_key, message):
+    #signature = sign_msg(chain.toJSON(), priv_key)
+    signature = b64encode(sign_message(private_key,message)).decode('utf-8')
+    return json.dumps({"messagetype" : "initialChain" , "payload" : chain.toJSON(), "signature":signature, }) # jakaś funkca z podpisem
 
-def join_Message():
-    return json.dumps({"messagetype": "request", "payloads" : send_request()})
-def send_request():
-    request_messege = {
-        "pub_key" = pub_key
-        "sig" = sinn_msg()
-        "msg" = siema
-    }
+# def join_Message():
+#     return json.dumps({"messagetype": "request", "payloads" : send_request()})
+# def send_request():
+#     request_messege = {
+#         "pub_key" = pub_key
+#         "sig" = sinn_msg()
+#         "msg" = siema
+#     }
     return json.dumps(request_messege)
-    
+
+"""
+ujednolicić wiadomości 
+"""
+def sign_message(priv_key, msg):
+    pass
+
 #jak sobie wyobraża stótkre wyysłanych wiadomości 
 #w pierwszej wiadomości reguest o dołączenie do p2p 
-def sign_msg(chain):
-    jak linijka 109
-    return jakis podpis 
+# def sign_msg(chain):
+#     jak linijka 109
+#     return jakis podpis 
 
 def messageRecivedHandler(msg):
     try:
@@ -56,9 +63,9 @@ def messageRecivedHandler(msg):
                     nodeInitialized = chain.check_chain_validity()
                     print(f"[PEER] is valid chain : {nodeInitialized}")
 
-            case "request":
-                new_user_pub = jsonmsg["payload"]
-                rozbić tego jsona i jeszcze if do sprawdzneia 
+            # case "request":
+            #     new_user_pub = jsonmsg["payload"]
+            #     rozbić tego jsona i jeszcze if do sprawdzneia 
 
     except Exception as ex:
         print(":(")
