@@ -20,7 +20,7 @@ def start_server(host, port, getInitialMessage,messageRecivedHandler):
         conn, addr = server.accept()
         print(f"[SERVER] Connected to {addr}")
         peers.append(conn)
-        send_message(conn, getInitialMessage())
+        send_message(conn, getInitialMessage)
         threading.Thread(target=handle_peer, args=(conn,messageRecivedHandler)).start()
 
 # Function to handle communication with a peer
