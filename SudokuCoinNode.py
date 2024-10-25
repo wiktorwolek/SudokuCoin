@@ -23,21 +23,6 @@ def getInitialMessage(private_key, public_key):
     public_key = public_key.decode('utf-8')
     return json.dumps({"messagetype" : "initialChain" , "payload" : chain.toJSON(), "signature": signature, "public_key": public_key})
 
-# def getRequestMessage():
-#     return json.dumps({"messagetype": "request", "payloads" : requestMessage()})
-
-# def requestMessage(private_key, public_key, message):
-#     signature = b64encode(sign_message(private_key,message)).decode('utf-8')
-#     request_messege = {
-#         "public_key": public_key, 
-#         "signature": signature,
-#         "message" : "Hello!!!",
-#     }
-#     return json.dumps(request_messege)
-
-"""
-ujednolicić wiadomości 
-"""
 def signMessage(private_key, message):
     key = RSA.import_key(private_key)
     msg_hash  = SHA256.new(message.encode()) 
@@ -54,13 +39,6 @@ def verifySignature(public_key, message, signature) -> bool:
         except (ValueError, TypeError) as e:
             print(e)
             return False  
-
-
-#jak sobie wyobraża stótkre wyysłanych wiadomości 
-#w pierwszej wiadomości reguest o dołączenie do p2p 
-# def sign_msg(chain):
-#     jak linijka 109
-#     return jakis podpis 
 
 def messageRecivedHandler(msg):
     try:
@@ -82,9 +60,6 @@ def messageRecivedHandler(msg):
                     else:
                         print("Failed to verify signature.")
 
-            # case "request":
-            #     new_user_pub = jsonmsg["payload"]
-            #     rozbić tego jsona i jeszcze if do sprawdzneia 
 
     except Exception as ex:
         print(":(")
