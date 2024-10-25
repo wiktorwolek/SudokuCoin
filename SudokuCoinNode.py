@@ -1,28 +1,41 @@
 import threading
 import argparse
-
+from HttpClient import runServer
 from P2P import *
 from SudoCoin import *
+
+
+
 
 nodeInitialized = False
 chain = BlockChain()
 def getJsonChain():
     return chain.toJSON()
-def getInitialMessage():
-    return json.dumps({"messagetype" : "initialChain" , "payload" : chain.toJSON()})
-def messageRecivedHandler(msg):
+def getInitialMessage(host,port):
+    return json.dumps({"messagetype" : "initialChain" , "payload" : {"chain":chain.toJSON(),"host":host,"port": port}})
+
+
+def httpRequestHandler(msg):
+    print(msg)
+
+def messageRecivedHandler(msg,conn):
     try:
+        print(f"[PEER] recived message : {msg}") 
         jsonmsg = json.loads(msg)
-        print(f"[PEER] recived message : {msg}")
         msgtype = jsonmsg["messagetype"]
+        payload = jsonmsg["payload"]
         match msgtype:
             case "initialChain":
                 global nodeInitialized
                 if not nodeInitialized:
                     print("[PEER] initializing node")
-                    chain.fromJSON(jsonmsg["payload"])
+                    chain.fromJSON(payload["chain"])
                     nodeInitialized = chain.check_chain_validity()
                     print(f"[PEER] is valid chain : {nodeInitialized}")
+                else:
+                    print(f"[PEER] adding backup host {payload["host"]}:{payload["port"]}")
+                    register_backup(payload["host"],payload["port"])
+                
 
     except Exception as ex:
         print(":(")
@@ -38,14 +51,15 @@ if __name__ == "__main__":
     args = parser.parse_args()
     host = '127.0.0.1'  # You can change this to the actual IP address if running on different machines
     port = args.port
-
+    http_thread = threading.Thread(target=runServer,args=(port+1000,httpRequestHandler,))
+    http_thread.start()
     # Start the server
     server_thread = threading.Thread(target=start_server, args=(host, port, getInitialMessage, messageRecivedHandler))
     server_thread.start()
     if not args.peers:
         print("[SERVER] Initial node")
         nodeInitialized = True;
-        
+    
     # Connect to multiple peers
     if args.peers:
         for peer in args.peers:
@@ -56,7 +70,9 @@ if __name__ == "__main__":
                 #threading.Thread(target=send_message, args=(peer_conn,)).start()
             except Exception as e:
                 print(f"[ERROR] Failed to connect to peer {peer}: {e}")
+        print("hello")
 
     # Wait for the server thread to finish
     server_thread.join()
+    http_thread.join()
     print(f"[INFO] Peer-to-peer network shutdown complete.")
