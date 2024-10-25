@@ -4,30 +4,38 @@ from HttpClient import runServer
 from P2P import *
 from SudoCoin import *
 
+
+
+
 nodeInitialized = False
 chain = BlockChain()
 def getJsonChain():
     return chain.toJSON()
-def getInitialMessage():
-    return json.dumps({"messagetype" : "initialChain" , "payload" : chain.toJSON()})
+def getInitialMessage(host,port):
+    return json.dumps({"messagetype" : "initialChain" , "payload" : {"chain":chain.toJSON(),"host":host,"port": port}})
 
 
 def httpRequestHandler(msg):
     print(msg)
 
-def messageRecivedHandler(msg):
+def messageRecivedHandler(msg,conn):
     try:
+        print(f"[PEER] recived message : {msg}") 
         jsonmsg = json.loads(msg)
-        print(f"[PEER] recived message : {msg}")
         msgtype = jsonmsg["messagetype"]
+        payload = jsonmsg["payload"]
         match msgtype:
             case "initialChain":
                 global nodeInitialized
                 if not nodeInitialized:
                     print("[PEER] initializing node")
-                    chain.fromJSON(jsonmsg["payload"])
+                    chain.fromJSON(payload["chain"])
                     nodeInitialized = chain.check_chain_validity()
                     print(f"[PEER] is valid chain : {nodeInitialized}")
+                else:
+                    print(f"[PEER] adding backup host {payload["host"]}:{payload["port"]}")
+                    register_backup(payload["host"],payload["port"])
+                
 
     except Exception as ex:
         print(":(")
@@ -62,6 +70,7 @@ if __name__ == "__main__":
                 #threading.Thread(target=send_message, args=(peer_conn,)).start()
             except Exception as e:
                 print(f"[ERROR] Failed to connect to peer {peer}: {e}")
+        print("hello")
 
     # Wait for the server thread to finish
     server_thread.join()
