@@ -16,11 +16,9 @@ chain = BlockChain()
 def getJsonChain():
     return chain.toJSON()
 
-def getInitialMessage(private_key,port):
-    message = 'Initial Message'
-    signature = b64encode(signMessage(private_key,message)).decode('utf-8')
+def getInitialMessage(host,port):
     public_key = public_key.decode('utf-8')
-    return json.dumps({"messagetype" : "initialChain" , "payload" : {"chain":chain.toJSON(), "signature": signature, "public_key": public_key,"host":host,"port": port}})
+    return json.dumps({"messagetype" : "initialChain" , "payload" : {"chain":chain.toJSON(),"public_key": public_key,"host":host,"port": port}})
 
 def send_transaction(sender_host,sender_port,recipient_host,recipient_port,transaction):
     payload = {
@@ -30,9 +28,7 @@ def send_transaction(sender_host,sender_port,recipient_host,recipient_port,trans
                       "port": recipient_port,},
         "transaction" : transaction }
     
-    #signature = b64encode(signMessage(private_key,payload)).decode('utf-8')
-
-    message =  {"messagetype" : "Transaction" , "payload" : payload,}# "signature": signature,}
+    message =  {"messagetype" : "Transaction" , "payload" : payload,}
 
     return json.dumps(message)
 
@@ -86,13 +82,7 @@ def messageRecivedHandler(msg,conn):
                     print("[PEER] initializing node")
                     chain.fromJSON(payload["chain"])
                     nodeInitialized = chain.check_chain_validity()
-                    print(f"[PEER] is valid chain : {nodeInitialized}")
-                    key_pub = payload["public_key"]        
-                    if verifySignature(key_pub, 'Initial Message', payload["signature"]):
-                        known_hosts['host_public_key'] = key_pub
-                        print("Host public key saved successfully.")
-                    else:
-                        print("Failed to verify signature.")
+                    print(f"[PEER] is valid chain : {nodeInitialized}")      
 
                 else:
                     host = payload["host"]
@@ -136,7 +126,7 @@ if __name__ == "__main__":
     http_thread.start()
     # Start the server
     user_wallet = Wallet(port)
-    server_thread = threading.Thread(target=start_server, args=(host, port, getInitialMessage(user_wallet.private_key, user_wallet.public_key), messageRecivedHandler))#pozamieniać te user
+    server_thread = threading.Thread(target=start_server, args=(host, port, getInitialMessage, messageRecivedHandler))#pozamieniać te user
     server_thread.start()
     if not args.peers:
         print("[SERVER] Initial node")
