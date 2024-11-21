@@ -1,5 +1,4 @@
-import random
-
+import hashlib
 # Function to check if a number can be placed in the given position (Sudoku rules)
 def is_valid(grid, row, col, num):
     for x in range(9):
@@ -32,19 +31,40 @@ def initialize_empty_grid():
 
 # Shuffle rows and columns of the Sudoku grid to permute it
 def permute_grid(grid, input_numbers):
-    random.seed(sum(input_numbers))  # Seed random with input to make consistent shuffling
-
-    # Shuffle rows within each 3-row block
     for block in range(3):
         rows = [block * 3 + i for i in range(3)]
-        random.shuffle(rows)
+        for i in input_numbers:
+            if i%3==0:
+                r = rows[1];
+                rows[1] = rows[2]
+                rows[2] = r
+            elif i%3==1:
+                r = rows[1];
+                rows[1] = rows[2]
+                rows[2] = r
+            elif i%3==2:
+                r = rows[0];
+                rows[0] = rows[1]
+                rows[1] = r
         grid[block * 3:block * 3 + 3] = [grid[r] for r in rows]
 
     # Shuffle columns within each 3-column block
     grid_t = list(zip(*grid))  # Transpose grid to treat columns like rows
     for block in range(3):
         cols = [block * 3 + i for i in range(3)]
-        random.shuffle(cols)
+        for i in input_numbers:
+            if i%3==0:
+                r = cols[1];
+                cols[1] = cols[2]
+                cols[2] = r
+            elif i%3==1:
+                r = cols[1];
+                cols[1] = cols[2]
+                cols[2] = r
+            elif i%3==2:
+                r = cols[0];
+                cols[0] = cols[1]
+                cols[1] = r
         grid_t[block * 3:block * 3 + 3] = [grid_t[c] for c in cols]
 
     return [list(row) for row in zip(*grid_t)]  # Transpose back
@@ -60,8 +80,10 @@ def extract_hash_from_grid(grid):
 
 # Main function to generate a "Sudoku hash"
 def sudoku_hash(input_string):
+
+    shahash = hashlib.sha256(input_string.encode())
     # Step 1: Convert input to numerical representation
-    input_numbers = string_to_numbers(input_string)
+    input_numbers = string_to_numbers(shahash.hexdigest())
 
     # Step 2: Initialize an empty 9x9 Sudoku grid and solve it
     sudoku_grid = initialize_empty_grid()

@@ -9,10 +9,9 @@ last_proof_no = last_block.proof_no
 proof_no = blockchain.proof_of_work(last_proof_no)
 
 blockchain.new_data(
-    sender="0",  
-    recipient="Quincy Larson",  
-    quantity=
-    1, 
+    sender="Telimena",  
+    recipient="Pan Tadeusz",  
+    quantity= 1, 
 )
 
 last_hash = last_block.calculate_hash
@@ -22,5 +21,6 @@ print("***Mining fccCoin has been successful***")
 print(blockchain.chain)
 print('last hash')
 print(block.calculate_hash)
+print('blockchain validity ' + str(blockchain.check_chain_validity()))
 json = blockchain.toJSON()
 
