@@ -19,7 +19,6 @@ def getJsonChain():
 def getInitialMessage(private_key,port):
     message = 'Initial Message'
     signature = b64encode(signMessage(private_key,message)).decode('utf-8')
-   # public_key_base64 = b64encode(public_key).decode('utf-8')
     public_key = public_key.decode('utf-8')
     return json.dumps({"messagetype" : "initialChain" , "payload" : {"chain":chain.toJSON(), "signature": signature, "public_key": public_key,"host":host,"port": port}})
 
