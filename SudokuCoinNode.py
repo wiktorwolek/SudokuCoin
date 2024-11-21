@@ -120,25 +120,6 @@ def messageRecivedHandler(msg,conn):
                     print("Invalid block received")
                     return False
 
-            case "chainRequest":
-                response = {
-                    "messagetype": "chainResponse",
-                    "payload": {"chain": chain.toJSON()}
-                }
-                conn.send(json.dumps(response).encode('utf-8'))
-                print("Sent chain to peer")
-                return True
-
-            case "chainResponse":
-                new_chain = BlockChain.fromJSON(payload["chain"])
-                if len(new_chain.chain) > len(chain.chain) and new_chain.check_chain_validity():
-                    chain.chain = new_chain.chain
-                    print("Synchronized blockchain")
-                    return True
-                else:
-                    print("Received chain is invalid or shorter")
-                    return False
-
     except Exception as ex:
         print("Exception")
         print(ex)
