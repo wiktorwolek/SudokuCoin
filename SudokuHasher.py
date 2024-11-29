@@ -1,39 +1,80 @@
 import hashlib
-import secrets
-def shuffle_list_with_seed(lst, random):
+import random
+
+def shuffle_list_with_seed(lst):
     random.shuffle(lst)
     return lst
-# Function to check if a number can be placed in the given position (Sudoku rules)
-def is_valid(grid, row, col, num):
-    for x in range(9):
-        if grid[row][x] == num or grid[x][col] == num:
-            return False
-    start_row, start_col = 3 * (row // 3), 3 * (col // 3)
+def print_grid(arr):
+    for i in range(9):
+        for j in range(9):
+            print (arr[i][j], end = " "),
+        print ()
+
+def find_empty_location(arr, l,rows,cols):
+    for row in rows:
+        for col in cols:
+            if(arr[row][col]== 0):
+                l[0]= row
+                l[1]= col
+                return True
+    return False
+
+
+def used_in_row(arr, row, num):
+    for i in range(9):
+        if(arr[row][i] == num):
+            return True
+    return False
+
+def used_in_col(arr, col, num):
+    for i in range(9):
+        if(arr[i][col] == num):
+            return True
+    return False
+
+def used_in_box(arr, row, col, num):
     for i in range(3):
         for j in range(3):
-            if grid[i + start_row][j + start_col] == num:
-                return False
-    return True
+            if(arr[i + row][j + col] == num):
+                return True
+    return False
 
-# Recursive backtracking function to generate a fully solved Sudoku grid
-def solve_sudoku(grid,rowRange,rowColumns):
-    for row in rowRange:
-        for col in rowColumns:
-            if grid[row][col] == 0:  # Find empty cell
-                for num in range(1, 10):
-                    if is_valid(grid, row, col, num):
-                        grid[row][col] = num
-                        if solve_sudoku(grid,rowRange,rowColumns):
-                            return True
-                        grid[row][col] = 0  # Backtrack
-                return False
-    return True
 
-# Create an empty 9x9 grid
+def check_location_is_safe(arr, row, col, num):
+    
+
+    return (not used_in_row(arr, row, num) and 
+           (not used_in_col(arr, col, num) and 
+           (not used_in_box(arr, row - row % 3, 
+                           col - col % 3, num))))
+
+def solve_sudoku(arr,cols,rows):
+    l =[0, 0]
+     
+    if(not find_empty_location(arr, l,rows,cols)):
+        return True
+    
+    row = l[0]
+    col = l[1]
+    
+    for num in range(1, 10):
+        
+        if(check_location_is_safe(arr, 
+                          row, col, num)):
+            
+            arr[row][col]= num
+
+            if(solve_sudoku(arr,rows,cols)):
+                return True
+
+            arr[row][col] = 0
+                   
+    return False 
+
 def initialize_empty_grid():
     return [[0 for _ in range(9)] for _ in range(9)]
 
-# Shuffle rows and columns of the Sudoku grid to permute it
+
 def permute_grid(grid, input_numbers):
     for block in range(3):
         rows = [block * 3 + i for i in range(3)]
@@ -81,6 +122,14 @@ def string_to_numbers(input_string):
 def extract_hash_from_grid(grid):
     # Concatenate the grid numbers row by row into a string and return it as a "hash"
     return ''.join(str(grid[row][col]) for row in range(9) for col in range(9))
+def fill_quadrant(grid,list,block):
+    rows = [block[0] * 3 + i for i in range(3)]
+    cols = [block[1] * 3 + i for i in range(3)]
+    a =0;
+    for row in rows:
+        for col in cols:
+            grid[row][col]=list[a]
+            a += 1
 
 # Main function to generate a "Sudoku hash"
 def sudoku_hash(input_string):
@@ -91,14 +140,21 @@ def sudoku_hash(input_string):
 
     # Step 2: Initialize an empty 9x9 Sudoku grid and solve it
     sudoku_grid = initialize_empty_grid()
-    rng = secrets.SystemRandom(input_numbers)
-    rowRange = list(range(9))
-    colRange = list(range(9))
-    solve_sudoku(sudoku_grid,rowRange,rowRange)  # This fills the grid with a valid Sudoku solution
+
+    random.seed(shahash.hexdigest())
+    rowRange =shuffle_list_with_seed( list(range(9)))
+    colRange = shuffle_list_with_seed(list(range(9)))
+    quadrant1 = shuffle_list_with_seed(list(range(1,10)))
+    quadrant2 = shuffle_list_with_seed(list(range(1,10)))
+    quadrant3 = shuffle_list_with_seed(list(range(1,10)))
+    fill_quadrant(sudoku_grid,quadrant1,[1,1])
+    fill_quadrant(sudoku_grid,quadrant2,[2,2])
+    fill_quadrant(sudoku_grid,quadrant3,[0,0])
+    solve_sudoku(sudoku_grid,rowRange,colRange)  # This fills the grid with a valid Sudoku solution
 
     # Step 3: Permute the grid based on the input numbers
     sudoku_grid = permute_grid(sudoku_grid, input_numbers)
-
+    #print_grid(sudoku_grid)
     # Step 4: Extract a hash-like string from the grid
     return extract_hash_from_grid(sudoku_grid)
 

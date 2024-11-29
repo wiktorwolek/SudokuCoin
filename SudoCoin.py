@@ -122,8 +122,7 @@ class BlockChain:
         #guess_hash = hashlib.sha256(guess).hexdigest()
         input_string = guess
         sudoku_hash_value = sudoku_hash(input_string)
-        print(sudoku_hash_value)
-        return sudoku_hash_value[:3]=="123"
+        return sudoku_hash_value[:2]=="12"
 
     @property
     def latest_block(self):
@@ -145,7 +144,6 @@ class BlockChain:
 
         last_hash = last_block.calculate_hash
         block = self.construct_block(proof_no, last_hash)
-
         return vars(block)
 
     @staticmethod
