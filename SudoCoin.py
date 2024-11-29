@@ -14,9 +14,9 @@ class Block:
 
     @property
     def calculate_hash(self):
-        block_of_string = "{}{}{}{}{}".format(self.index, self.proof_no,
+        block_of_string = sudoku_hash("{}{}{}{}{}".format(self.index, self.proof_no,
                                               self.prev_hash, self.data,
-                                              self.timestamp)
+                                              self.timestamp))
 
         return sudoku_hash(block_of_string)
     def __repr__(self):
@@ -122,7 +122,7 @@ class BlockChain:
         #guess_hash = hashlib.sha256(guess).hexdigest()
         input_string = guess
         sudoku_hash_value = sudoku_hash(input_string)
-        return sudoku_hash_value[:3]=="123"
+        return sudoku_hash_value[:2]=="12"
 
     @property
     def latest_block(self):
@@ -132,7 +132,7 @@ class BlockChain:
 
         self.new_data(
             sender="0",  #it implies that this node has created a new block
-            receiver=details_miner,
+            recipient=details_miner,
             quantity=
             1,  #creating a new block (or identifying the proof number) is awarded with 1
         )
@@ -144,7 +144,6 @@ class BlockChain:
 
         last_hash = last_block.calculate_hash
         block = self.construct_block(proof_no, last_hash)
-
         return vars(block)
 
     @staticmethod
