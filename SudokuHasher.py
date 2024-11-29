@@ -1,4 +1,8 @@
 import hashlib
+import secrets
+def shuffle_list_with_seed(lst, random):
+    random.shuffle(lst)
+    return lst
 # Function to check if a number can be placed in the given position (Sudoku rules)
 def is_valid(grid, row, col, num):
     for x in range(9):
@@ -12,14 +16,14 @@ def is_valid(grid, row, col, num):
     return True
 
 # Recursive backtracking function to generate a fully solved Sudoku grid
-def solve_sudoku(grid):
-    for row in range(9):
-        for col in range(9):
+def solve_sudoku(grid,rowRange,rowColumns):
+    for row in rowRange:
+        for col in rowColumns:
             if grid[row][col] == 0:  # Find empty cell
                 for num in range(1, 10):
                     if is_valid(grid, row, col, num):
                         grid[row][col] = num
-                        if solve_sudoku(grid):
+                        if solve_sudoku(grid,rowRange,rowColumns):
                             return True
                         grid[row][col] = 0  # Backtrack
                 return False
@@ -87,7 +91,10 @@ def sudoku_hash(input_string):
 
     # Step 2: Initialize an empty 9x9 Sudoku grid and solve it
     sudoku_grid = initialize_empty_grid()
-    solve_sudoku(sudoku_grid)  # This fills the grid with a valid Sudoku solution
+    rng = secrets.SystemRandom(input_numbers)
+    rowRange = list(range(9))
+    colRange = list(range(9))
+    solve_sudoku(sudoku_grid,rowRange,rowRange)  # This fills the grid with a valid Sudoku solution
 
     # Step 3: Permute the grid based on the input numbers
     sudoku_grid = permute_grid(sudoku_grid, input_numbers)
