@@ -4,6 +4,12 @@ import random
 def shuffle_list_with_seed(lst):
     random.shuffle(lst)
     return lst
+def print_sudoku_hash(hash):
+    for i in range(9):
+        for j in range(9):
+            print (hash[i*9+j], end = " "),
+        print ()
+    print("sha-256 hash "+hash[81:])
 def print_grid(arr):
     for i in range(9):
         for j in range(9):
@@ -156,6 +162,6 @@ def sudoku_hash(input_string):
     sudoku_grid = permute_grid(sudoku_grid, input_numbers)
     #print_grid(sudoku_grid)
     # Step 4: Extract a hash-like string from the grid
-    return extract_hash_from_grid(sudoku_grid)
+    return extract_hash_from_grid(sudoku_grid) + shahash.hexdigest()
 
 
