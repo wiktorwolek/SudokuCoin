@@ -126,8 +126,7 @@ if __name__ == "__main__":
     http_thread.start()
     # Start the server
     user_wallet = Wallet(port)
-    server_thread = threading.Thread(target=start_server, args=(host, port, getInitialMessage, messageRecivedHandler))#pozamieniać te user
-    server_thread.start()
+    server_thread = threading.Thread(target=start_server, args=(host, port, getInitialMessage, messageRecivedHandler))
     if not args.peers:
         print("[SERVER] Initial node")
         nodeInitialized = True;
