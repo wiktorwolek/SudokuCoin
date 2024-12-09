@@ -2,6 +2,11 @@ import socket
 import threading
 import argparse
 import json
+
+from Crypto.Hash import SHA256
+from Crypto.PublicKey import RSA
+from Crypto.Signature import pkcs1_15
+
 # Global variable to hold connections
 peers = []
 backuppeers = []
@@ -69,3 +74,4 @@ def connect_to_peer(host, port,messageRecivedHandler):
 # Function to send messages to peers
 def send_message(conn, msg):
     conn.send(msg.encode('utf-8'))
+
