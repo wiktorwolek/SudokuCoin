@@ -67,7 +67,14 @@ class SudokuCoinNode:
 
 
     def httpRequestHandler(self,msg):
-        print(msg)
+        print("httpmessage "+str(msg["sender"])+str(msg["recipient"])+str(msg["quantity"])+str(msg["signature"]))
+        self.chain.new_data(
+            sender=str(msg["sender"]),  
+            recipient=str(msg["recipient"]),
+            quantity=str(msg["quantity"]), 
+            signature=str(msg["signature"])
+        )
+        
 
     def messageRecivedHandler(self,msg,conn):
         try:
@@ -119,7 +126,15 @@ class SudokuCoinNode:
             print(ex)
 
     def handleMinerThread(self,stop_event):
-        block = self.chain.block_mining(str(self.user_wallet.public_key),stop_event)
+        signature = self.signMessage(self.user_wallet.private_key,"0"+str(self.user_wallet.public_key)+str(1))
+        self.chain.new_data(
+            sender="0",  
+            recipient=str(self.user_wallet.public_key),
+            quantity=
+            1, 
+            signature = str(signature)
+        )
+        block = self.chain.block_mining(stop_event)
         if stop_event.is_set():
             return;
         broadcast(self.send_new_block(self.host,self.port,self.user_wallet, block),"")
