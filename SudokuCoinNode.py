@@ -1,4 +1,5 @@
 import threading
+import ctypes
 import argparse
 from HttpClient import runServer
 from P2P import *
@@ -70,7 +71,7 @@ class SudokuCoinNode:
 
     def messageRecivedHandler(self,msg,conn):
         try:
-            print(f"[PEER] recived message : {msg}") 
+           # print(f"[PEER] recived message : {msg}") 
             jsonmsg = json.loads(msg)
             msgtype = jsonmsg["messagetype"]
             payload = jsonmsg["payload"]
@@ -78,10 +79,11 @@ class SudokuCoinNode:
                 case "initialChain":
                     if not self.nodeInitialized:
                         print("[PEER] initializing node")
+                        self.nodeInitialized = True;
                         self.chain = BlockChain.fromJSON(payload["chain"])
                         self.nodeInitialized = self.chain.check_chain_validity()
                         print(f"[PEER] is valid chain : {self.nodeInitialized}")   
-                        #miner_thread.start()
+                        self.miner_thread.start()
                     else:
                         host = payload["host"]
                         port = payload["port"]
@@ -100,8 +102,13 @@ class SudokuCoinNode:
                     block = payload["block"]
                     new_block = Block.fromJSON(block)
                     if self.chain.check_validity(new_block, self.chain.latest_block):
+                        self.stop_event.set()
                         self.chain.chain.append(new_block)
                         print(f"Added new block: {new_block}")
+                        self.miner_thread.join()
+                        self.stop_event = threading.Event()
+                        self.miner_thread = threading.Thread(target=self.handleMinerThread, args=(self.stop_event,))
+                        self.miner_thread.start()
                         return True
                     else:
                         print("Invalid block received")
@@ -111,16 +118,14 @@ class SudokuCoinNode:
             print("Exception")
             print(ex)
 
-    def handleMinerThread(self):
-        print("Miner to work")
-        block = self.chain.block_mining(str(self.user_wallet.public_key))
-        print(self.chain.check_chain_validity())
+    def handleMinerThread(self,stop_event):
+        block = self.chain.block_mining(str(self.user_wallet.public_key),stop_event)
+        if stop_event.is_set():
+            return;
         broadcast(self.send_new_block(self.host,self.port,self.user_wallet, block),"")
 
 
-
     def main(self):
-    # Argument parsing
         parser = argparse.ArgumentParser(description="Simple P2P Network")
         parser.add_argument("--port", type=int, required=True, help="Port number to listen on")
         parser.add_argument("--peers", type=str, nargs='*', help="List of peers to connect to in format host:port")
@@ -133,21 +138,20 @@ class SudokuCoinNode:
         self.http_thread.start() 
         self.server_thread = threading.Thread(target=start_server, args=(self.host, self.port, self.getInitialMessage, self.messageRecivedHandler))
         self.server_thread.start()
-        self.miner_thread = threading.Thread(target=self.handleMinerThread, args=())
+        self.stop_event = threading.Event()
+        self.miner_thread = threading.Thread(target=self.handleMinerThread, args=(self.stop_event,))
         self.nodeInitialized = False
         if not args.peers:
             print("[SERVER] Initial node")
             self.nodeInitialized = True;
             self.chain.construct_genesis()
             self.miner_thread.start()
-        # Connect to multiple peers
         if args.peers:
             for peer in args.peers:
                 try:
                     peer_host, peer_port = peer.split(":")
                     peer_conn = connect_to_peer(peer_host, int(peer_port), self.messageRecivedHandler)
                     print(f"[CLIENT] Connected to {peer_host}:{peer_port}")
-                    #threading.Thread(target=send_message, args=(peer_conn,)).start()
                 except Exception as e:
                     print(f"[ERROR] Failed to connect to peer {peer}: {e}")
         print("hello")

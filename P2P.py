@@ -27,7 +27,6 @@ def start_server(host, port, getInitialMessage, messageRecivedHandler):
     server.bind((host, port))
     server.listen(5)
     print(f"[SERVER] Listening on {host}:{port}")
-
     while True:
         conn, addr = server.accept()
         print(f"[SERVER] Connected to {conn.getsockname()}")

@@ -2,7 +2,7 @@ import hashlib
 import time
 import json
 from SudokuHasher import *
-
+import threading
 class Block:
 
     def __init__(self, index, proof_no, prev_hash, data, timestamp=None):
@@ -106,13 +106,15 @@ class BlockChain:
         return True
 
     @staticmethod
-    def proof_of_work(last_proof):
+    def proof_of_work(last_proof,stop_event):
         '''this simple algorithm identifies a number f' such that hash(ff') contain 4 leading zeroes
          f is the previous f'
          f' is the new proof
         '''
-        proof_no = 0
+        proof_no = random.randint(0,10000)
         while BlockChain.verifying_proof(proof_no, last_proof) is False:
+            if stop_event.is_set():
+                return
             proof_no += 1
         print(f'iterations {proof_no}')
         return proof_no
@@ -131,7 +133,7 @@ class BlockChain:
     def latest_block(self):
         return self.chain[-1]
 
-    def block_mining(self, details_miner):
+    def block_mining(self, details_miner,stop_event):
 
         self.new_data(
             sender="0",  
@@ -143,8 +145,9 @@ class BlockChain:
         last_block = self.latest_block
 
         last_proof_no = last_block.proof_no
-        proof_no = self.proof_of_work(last_proof_no)
-
+        proof_no = self.proof_of_work(last_proof_no,stop_event)
+        if stop_event.is_set():
+            return;
         last_hash = last_block.calculate_hash
         block = self.construct_block(proof_no, last_hash)
         print_sudoku_hash(block.calculate_hash)
