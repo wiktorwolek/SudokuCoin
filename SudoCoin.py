@@ -97,11 +97,12 @@ class BlockChain:
 
         return True
 
-    def new_data(self, sender, recipient, quantity):
+    def new_data(self, sender, recipient, quantity,signature):
         self.current_data.append({
             'sender': sender,
             'recipient': recipient,
-            'quantity': quantity
+            'quantity': quantity,
+            'signature':signature 
         })
         return True
 
@@ -133,15 +134,7 @@ class BlockChain:
     def latest_block(self):
         return self.chain[-1]
 
-    def block_mining(self, details_miner,stop_event):
-
-        self.new_data(
-            sender="0",  
-            recipient=details_miner,
-            quantity=
-            1, 
-        )
-
+    def block_mining(self, stop_event):
         last_block = self.latest_block
 
         last_proof_no = last_block.proof_no
