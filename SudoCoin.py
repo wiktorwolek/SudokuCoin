@@ -26,11 +26,11 @@ class Block:
     def toJSON(self):
         return json.dumps(self, default=lambda o: o.__dict__)
     @staticmethod
-    def fromJSON(json_str):
+    def fromJSON(data):
         # Load a Block from a JSON string
-        data = json.loads(json_str)
+        #data = json.loads(json_str)
         return Block(
-            index=data['index'],
+            index=int(data['index']),
             proof_no=data['proof_no'],
             prev_hash=data['prev_hash'],
             data=data['data'],
@@ -40,16 +40,15 @@ class Block:
 class BlockChain:
     def toJSON(self):
         # Convert the entire blockchain to JSON format
-        return json.dumps({
-            'chain': [block.toJSON() for block in self.chain]
-        })
+        return json.dumps(
+            [block.__dict__ for block in self.chain]
+        )
     @staticmethod
     def fromJSON(json_str):
         # Load a BlockChain from a JSON string
         data = json.loads(json_str)
         blockchain = BlockChain()
-        # Recreate the blocks
-        for block_data in data['chain']:
+        for block_data in data:
             block = Block.fromJSON(block_data)
             blockchain.chain.append(block)
 
@@ -57,7 +56,7 @@ class BlockChain:
     def __init__(self):
         self.chain = []
         self.current_data = []
-        self.construct_genesis()
+       # self.construct_genesis()
 
     def construct_genesis(self):
         self.construct_block(proof_no=0, prev_hash=0)
@@ -80,16 +79,20 @@ class BlockChain:
     @staticmethod
     def check_validity(block, prev_block):
         if prev_block.index + 1 != block.index:
+            print("bad index")
             return False
 
         elif prev_block.calculate_hash != block.prev_hash:
+            print("bad prev hash")
             return False
 
         elif not BlockChain.verifying_proof(block.proof_no,
                                             prev_block.proof_no):
+            print("bad proof")
             return False
 
         elif block.timestamp <= prev_block.timestamp:
+            print("bad timestamp")
             return False
 
         return True
@@ -131,10 +134,10 @@ class BlockChain:
     def block_mining(self, details_miner):
 
         self.new_data(
-            sender="0",  #it implies that this node has created a new block
+            sender="0",  
             recipient=details_miner,
             quantity=
-            1,  #creating a new block (or identifying the proof number) is awarded with 1
+            1, 
         )
 
         last_block = self.latest_block
@@ -144,6 +147,7 @@ class BlockChain:
 
         last_hash = last_block.calculate_hash
         block = self.construct_block(proof_no, last_hash)
+        print_sudoku_hash(block.calculate_hash)
         return vars(block)
 
     @staticmethod

@@ -41,11 +41,10 @@ def start_server(host, port, getInitialMessage, messageRecivedHandler):
 def handle_peer(conn,message_recived_handler):
     while True:
         try:
-            msg = conn.recv(1024).decode('utf-8')
+            msg = conn.recv(1000024).decode('utf-8')
             if msg and msg not in prevmsg:
                 prevmsg.insert(0,msg)
                 message_recived_handler(msg,conn)
-                # Send the message to all connected peers
                 broadcast(msg, conn)
         except:
             print(f"[SERVER] disconnected")

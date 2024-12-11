@@ -19,10 +19,26 @@ class Wallet:
                     self.private_key = private_key_obj.export_key()
                     self.public_key = private_key_obj.publickey().export_key()
                     is_password_correct = True
+                    print("Hello")
                 except:
                     print("Wrong password\n")
         else:
             password = input("You are new here, please enter password:\n")
+            self.private_key, self.public_key = self.generate_keys()
+            self.save_credentials(password)
+    def __init__(self, port,password):
+        self.port = port
+        print(self.port)
+        if os.path.exists(f'keys/{self.port}_priv.pem'):
+            try:
+                private_key_obj = self.decrypt_key(password)
+                self.private_key = private_key_obj.export_key()
+                self.public_key = private_key_obj.publickey().export_key()
+                print("Hello")
+            except:
+                print("Wrong password\n")
+        else:
+            print("You are new here")
             self.private_key, self.public_key = self.generate_keys()
             self.save_credentials(password)
 
