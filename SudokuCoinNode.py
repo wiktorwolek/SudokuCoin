@@ -163,6 +163,7 @@ class SudokuCoinNode:
             print(b.proof_no,end=" ")
         print("len="+str(self.chain.latest_block.index) + " hash="+sudoku_hash(str(self.chain.chain))[0:5])
     def handleMinerThread(self,stop_event):
+        print("Start Mining block")
         signature = self.signMessage(self.user_wallet.private_key,"0"+str(self.user_wallet.public_key)+str(1))
         self.chain.new_data(
             sender="0",  
@@ -173,10 +174,11 @@ class SudokuCoinNode:
         )
         block = self.chain.block_mining(stop_event)
         if stop_event.is_set():
+            print("stop")
             return;
         broadcast(self.send_new_block(self.host,self.port,self.user_wallet, block),"")
         for f in self.forks:
-            if f[-1].index >= self.chain.latest_block.index:
+            if f[-1].index > self.chain.latest_block.index:
                 print("Current chain is fork swiching")
                 if self.is_evil:
                     print("I am evil i will not switch")
