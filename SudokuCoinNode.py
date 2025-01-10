@@ -21,19 +21,6 @@ class SudokuCoinNode:
         public_key = self.user_wallet.public_key.decode('utf-8')
         return json.dumps({"messagetype" : "initialChain" , "payload" : {"chain": self.chain.toJSON(),"public_key": public_key,"host":host,"port": port}})
 
-    def send_transaction(self,sender_host,sender_port,recipient_host,recipient_port,transaction):
-        payload = {
-        "sender": {"host": sender_host,
-                    "port": sender_port,},
-        "recipient": {"host": recipient_host,
-                        "port": recipient_port,},
-        "transaction" : transaction }
-
-        message =  {"messagetype" : "Transaction" , "payload" : payload,}
-
-        return json.dumps(message)
-
-
     def send_new_block(self,host,port, wallet, block):
         payload = {
         "host": host,
@@ -42,7 +29,6 @@ class SudokuCoinNode:
         "block": block}
 
         message = {"messagetype" : "newBlock" , "payload" : payload}
-
         return json.dumps(message)
 
 
@@ -53,7 +39,7 @@ class SudokuCoinNode:
 
         return pkcs1_15.new(key).sign(msg_hash)
 
-    def verifySignature(self,public_key, message, signature) -> bool:
+    def verifySignature(self, public_key:bytes, message, signature) -> bool:
         key = RSA.import_key(public_key)
         msg_hash = SHA256.new(message.encode())
         try:
@@ -63,22 +49,72 @@ class SudokuCoinNode:
         except (ValueError, TypeError) as e:
             print(e)
             return False  
+        
+    def sendTransaction(self,msg):
+        signature = self.signMessage(self.user_wallet.private_key,"0"+str(self.user_wallet.public_key)+str(1))
+        signature_str = b64encode(signature).decode('utf-8')
+        if  str(msg["sender"][0]) == str(self.port):
+            transaction = {
+                        "sender": str(self.user_wallet.public_key.decode('utf-8')),
+                        "recipient": str(self.user_wallet.read_pub_key_from_file(msg["recipient"][0])),
+                        "quantity": str(msg["quantity"][0]),
+                        "signature": str(signature_str)
+            }
+            #print(transaction)
+            # self.chain.new_data(
+            #             sender=transaction["sender"],  
+            #             recipient=transaction["recipient"],
+            #             quantity=transaction["quantity"], 
+            #             signature=transaction["signature"]
+            #         )
+            self.broadcast_transaction(transaction)
+        else:
+            print("You cannot send not your's coin")
 
-
+    def broadcast_transaction(self, transaction):
+        print("Brodcarting transaction")
+        message = {
+            "messagetype": "Transaction",
+            "payload": transaction
+        }
+        broadcast(json.dumps(message), "")
 
     def httpRequestHandler(self,msg):
-        print("httpmessage "+str(msg["sender"])+str(msg["recipient"])+str(msg["quantity"])+str(msg["signature"]))
-        self.chain.new_data(
-            sender=str(msg["sender"]),  
-            recipient=str(msg["recipient"]),
-            quantity=str(msg["quantity"]), 
-            signature=str(msg["signature"])
-        )
-        
+        try:
+            print("httpmessage type "+str(msg["msg_type"]))
+            if str(msg["msg_type"][0]) == "tranasaction":
+                print("httpmessage "+str(msg["sender"])+str(msg["recipient"])+str(msg["quantity"]))
+                self.sendTransaction(msg)
 
+            if str(msg["msg_type"][0]) == "balance":
+                self.user_wallet.show_balance()
+            
+            if str(msg["msg_type"][0]) == "show_chain":
+                print(type(self.chain.toJSON()))
+            
+            if str(msg["msg_type"][0]) == "test":
+                pub_key_from_msg = self.user_wallet.read_pub_key_from_file(msg["port"][0]) 
+                print("Balance z tego obliczania: ", self.get_account_balance(pub_key_from_msg.decode('utf-8')))
+                #print(self.user_wallet.read_pub_key_from_file(msg["port"][0]))
+
+        except Exception as e:
+            print('Wrong http message type, caught expectetion:', e)
+    
+    def verifyTransaction(self, transaction):
+        print(f"weryfikacja tranzakcji, wysłano z {transaction['sender'].encode('utf-8')}")
+
+        print(f"ma zostać wysłane tyle {transaction['quantity']}, a jest tyle {self.get_account_balance(transaction['sender'])}")
+        print(type(transaction['quantity']), type(self.get_account_balance(transaction['sender'])))
+        if self.verifySignature(transaction['sender'].encode('utf-8'), "0"+str(transaction['sender'].encode('utf-8'))+str(1), transaction['signature']):
+            if int(transaction['quantity']) <= self.get_account_balance(transaction['sender']):
+                print("transaction accepted")
+                return True
+            else:
+                print('not enough coins')
+                return False
+        #return True
     def messageRecivedHandler(self,msg,conn):
         try:
-           # print(f"[PEER] recived message : {msg}") 
             jsonmsg = json.loads(msg)
             msgtype = jsonmsg["messagetype"]
             payload = jsonmsg["payload"]
@@ -98,20 +134,27 @@ class SudokuCoinNode:
                         register_backup(payload["host"],payload["port"])
                     
                 case "Transaction":
-                    print("Sending transaction")
-                    transaction = payload
-                    self.chain.new_data(payload['sender'], payload['recipient'], payload['transaction'])
-                    print(f"Added transaction: {transaction}")
-                    return True
+                    print("New transaction detected\n")
+                    if self.verifyTransaction(payload):
+                        self.add_transaction(payload)
+                        new_block = self.chain.construct_block(proof_no=self.chain.proof_of_work(self.chain.latest_block.proof_no, self.stop_event),
+                                                                prev_hash=self.chain.latest_block.calculate_hash)
+                        broadcast(self.send_new_block(self.host,self.port,self.user_wallet, vars(new_block)),"")
+                    else:
+                        print("False Transaction")
+                        pass
 
                 case "newBlock":
                     print("Sending new block to chain")
                     block = payload["block"]
+                    print("blok który przyszedł")
+                    print(block['data'])
+                    
                     new_block = Block.fromJSON(block)
                     if self.chain.check_validity(new_block, self.chain.latest_block):
                         self.stop_event.set()
                         self.chain.chain.append(new_block)
-                        print(f"Added new block: {new_block}")
+                        print(f"Added new block")
                         self.miner_thread.join()
                         self.stop_event = threading.Event()
                         self.miner_thread = threading.Thread(target=self.handleMinerThread, args=(self.stop_event,))
@@ -129,7 +172,7 @@ class SudokuCoinNode:
         signature = self.signMessage(self.user_wallet.private_key,"0"+str(self.user_wallet.public_key)+str(1))
         self.chain.new_data(
             sender="0",  
-            recipient=str(self.user_wallet.public_key),
+            recipient=str(self.user_wallet.public_key.decode('utf-8')),
             quantity=
             1, 
             signature = str(signature)
@@ -138,6 +181,31 @@ class SudokuCoinNode:
         if stop_event.is_set():
             return;
         broadcast(self.send_new_block(self.host,self.port,self.user_wallet, block),"")
+
+        self.user_wallet.change_wallet_balance(1)#pomocniecze do testów
+
+    def add_transaction(self, transaction):
+        self.chain.new_data(
+            sender=transaction['sender'],  
+            recipient=transaction['recipient'],
+            quantity=transaction['quantity'], 
+            signature = transaction['signature']
+        )
+
+
+    def get_account_balance(self, pub_key):
+        balance = 0
+        block_chain = json.loads(self.chain.toJSON())
+        for block in block_chain:
+                data = block['data']
+                if len(data) != 0:
+                    if data[0]['recipient'] == pub_key:
+                        balance += data[0]['quantity']
+                    if data[0]['sender'] == pub_key:
+                        balance -= data[0]['quantity']
+        
+        return balance
+  
 
 
     def main(self):
@@ -175,5 +243,6 @@ class SudokuCoinNode:
         #server_thread.join()
         self.http_thread.join()
         print(f"[INFO] Peer-to-peer network shutdown complete.")
+
 if __name__ == "__main__": 
     SudokuCoinNode().main();

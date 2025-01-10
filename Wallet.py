@@ -7,28 +7,9 @@ from Crypto.Random import get_random_bytes
 import os
 
 class Wallet:
-    def __init__(self, port):
+    def __init__(self, port, password):
         self.port = port
-        print(self.port)
-        if os.path.exists(f'keys/{self.port}_priv.pem'):
-            is_password_correct = False
-            while not is_password_correct:
-                try:
-                    entered_password = input("Enter Your password\n")
-                    private_key_obj = self.decrypt_key(entered_password)
-                    self.private_key = private_key_obj.export_key()
-                    self.public_key = private_key_obj.publickey().export_key()
-                    is_password_correct = True
-                    print("Hello")
-                except:
-                    print("Wrong password\n")
-        else:
-            password = input("You are new here, please enter password:\n")
-            self.private_key, self.public_key = self.generate_keys()
-            self.save_credentials(password)
-    def __init__(self, port,password):
-        self.port = port
-        print(self.port)
+        self.balance = 0
         if os.path.exists(f'keys/{self.port}_priv.pem'):
             try:
                 private_key_obj = self.decrypt_key(password)
@@ -86,3 +67,25 @@ class Wallet:
         
         decrypted_pem = unpad(cipher.decrypt(encrypted_key), AES.block_size)
         return RSA.import_key(decrypted_pem)
+    
+    def show_balance(self):
+        print(f"Current account balance: {self.balance}")
+
+    def change_wallet_balance(self, amount):
+        self.balance = self.balance + amount
+    
+    def read_pub_key_from_file(self,port):
+        with open(f'keys/{port}_pub.pem', 'rb') as f:
+            return f.read()
+        
+    def calculate_balance(self, address):
+        balance = 0
+        for block in self.chain:
+            if block.data:
+                for transaction_dict in block.data:
+                    if 'recipient' in transaction_dict and transaction_dict['recipient'] == address:
+                        balance += transaction_dict['amount']
+                    if 'sender' in transaction_dict and transaction_dict['sender'] == address:
+                        balance -= transaction_dict['amount']
+        return balance
+
