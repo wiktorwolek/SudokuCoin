@@ -1,6 +1,7 @@
 import threading
 import ctypes
 import argparse
+import traceback
 from HttpClient import runServer
 from P2P import *
 from SudoCoin import *
@@ -9,11 +10,14 @@ from Crypto.PublicKey import RSA
 from Crypto.Signature import PKCS1_v1_5 
 from Crypto.Hash import SHA512
 from base64 import b64decode, b64encode
+
+
 class SudokuCoinNode:
     known_hosts = {}
-
+    lock = threading.Lock()
     nodeInitialized = False
-    chain = BlockChain()       
+    chain = BlockChain()
+    forks = []    
     def getJsonChain(self):
         return self.chain.toJSON()
 
@@ -144,31 +148,62 @@ class SudokuCoinNode:
                         print("False Transaction")
                         pass
 
-                case "newBlock":
-                    print("Sending new block to chain")
-                    block = payload["block"]
-                    print("blok który przyszedł")
-                    print(block['data'])
-                    
-                    new_block = Block.fromJSON(block)
-                    if self.chain.check_validity(new_block, self.chain.latest_block):
-                        self.stop_event.set()
-                        self.chain.chain.append(new_block)
-                        print(f"Added new block")
-                        self.miner_thread.join()
-                        self.stop_event = threading.Event()
-                        self.miner_thread = threading.Thread(target=self.handleMinerThread, args=(self.stop_event,))
-                        self.miner_thread.start()
-                        return True
-                    else:
-                        print("Invalid block received")
-                        return False
+                case "newBlock": 
+                    print("Got new block to chain")
+                    with self.lock:
+                        self.printChain()
+                        self.printForks()
+                        block = payload["block"]
+                        new_block = Block.fromJSON(block)
+                        broadcast(msg,conn)
+                        if self.is_evil:
+                            print("I am EVIL I wont add other blocks than mine")
+                            return True
+                        if self.chain.check_validity(new_block, self.chain.latest_block):
+                            print(f"Added new block")
+                            self.stop_event.set()
+                            self.chain.chain.append(new_block)
+                            self.miner_thread.join()
+                            self.stop_event = threading.Event()
+                            self.miner_thread = threading.Thread(target=self.handleMinerThread, args=(self.stop_event,))
+                            self.miner_thread.start()
+                            return True
+                        else:
+                            print("Possible Fork")
+                            for f in self.forks:
+                                if BlockChain.check_validity(new_block,f[-1]):
+                                    print("Fork Length increesed")
+                                    f.append(new_block)
+                                    return True
+                            if new_block.index < len(self.chain.chain) and new_block.calculate_hash == self.chain.chain[new_block.index].calculate_hash:
+                                print("block on chain")
+                                return True
+                            if new_block.index-1 < len(self.chain.chain) and self.chain.check_validity(new_block, self.chain.chain[new_block.index-1]):
+                                print("forkDetected "+str(new_block.index))
+                                self.forks.append([self.chain.chain[new_block.index-1],new_block])
+                                return True
+                            print(new_block.proof_no)
+                            self.printChain()
+                            self.printForks()
+                            return False
 
         except Exception as ex:
             print("Exception")
-            print(ex)
-
+            print(traceback.print_exc())
+    def printForks(self):
+        print("Forks:")
+        for f in self.forks:
+            for b in f:
+                print(b.proof_no,end=" ")
+            print("len="+str(f[-1].index))
+        print()
+    def printChain(self):
+        print("Chain:")
+        for b in self.chain.chain:
+            print(b.proof_no,end=" ")
+        print("len="+str(self.chain.latest_block.index) + " hash="+sudoku_hash(str(self.chain.chain))[0:5])
     def handleMinerThread(self,stop_event):
+        print("Start Mining block")
         signature = self.signMessage(self.user_wallet.private_key,"0"+str(self.user_wallet.public_key)+str(1))
         self.chain.new_data(
             sender="0",  
@@ -179,8 +214,56 @@ class SudokuCoinNode:
         )
         block = self.chain.block_mining(stop_event)
         if stop_event.is_set():
+            print("stop")
             return;
         broadcast(self.send_new_block(self.host,self.port,self.user_wallet, block),"")
+        for f in self.forks:
+            if f[-1].index > self.chain.latest_block.index:
+                print("Current chain is fork swiching")
+                if self.is_evil:
+                    print("I am evil i will not switch")
+                    break
+                newFork = []
+                while True:
+                    b = self.chain.chain.pop()
+                    newFork.insert(0,b)
+                    if b.index == f[0].index:
+                        self.chain.chain.extend(f)
+                        break;
+                
+            elif f[-1].index + 6 < self.chain.latest_block.index:
+                self.forks.remove(f)
+        
+        self.printChain()
+        self.printForks()
+        print(self.chain.check_chain_validity())
+        self.miner_thread = threading.Thread(target=self.handleMinerThread, args=(self.stop_event,))
+        self.miner_thread.start()
+
+        self.user_wallet.change_wallet_balance(1)#pomocniecze do testów
+
+    def add_transaction(self, transaction):
+        self.chain.new_data(
+            sender=transaction['sender'],  
+            recipient=transaction['recipient'],
+            quantity=transaction['quantity'], 
+            signature = transaction['signature']
+        )
+
+
+    def get_account_balance(self, pub_key):
+        balance = 0
+        block_chain = json.loads(self.chain.toJSON())
+        for block in block_chain:
+                data = block['data']
+                if len(data) != 0:
+                    if data[0]['recipient'] == pub_key:
+                        balance += data[0]['quantity']
+                    if data[0]['sender'] == pub_key:
+                        balance -= data[0]['quantity']
+        
+        return balance
+  
 
         self.user_wallet.change_wallet_balance(1)#pomocniecze do testów
 
@@ -213,9 +296,13 @@ class SudokuCoinNode:
         parser.add_argument("--port", type=int, required=True, help="Port number to listen on")
         parser.add_argument("--peers", type=str, nargs='*', help="List of peers to connect to in format host:port")
         parser.add_argument("--password", type=str, nargs='*', help="wallet password")
+        parser.add_argument("--isEvil", type=bool, nargs='?',const=False, help="Is Evil")
         args = parser.parse_args()
         self.host = '127.0.0.1'  # You can change this to the actual IP address if running on different machines
         self.port = args.port
+        self.is_evil = args.isEvil
+        if self.is_evil:
+            print("I am Evil");
         self.user_wallet = Wallet(self.port,str(args.password))
         self.http_thread = threading.Thread(target=runServer,args=(self.port+1000,self.httpRequestHandler,))
         self.http_thread.start() 

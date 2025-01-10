@@ -79,20 +79,16 @@ class BlockChain:
     @staticmethod
     def check_validity(block, prev_block):
         if prev_block.index + 1 != block.index:
-            print("bad index")
             return False
 
         elif prev_block.calculate_hash != block.prev_hash:
-            print("bad prev hash")
             return False
 
         elif not BlockChain.verifying_proof(block.proof_no,
                                             prev_block.proof_no):
-            print("bad proof")
             return False
 
         elif block.timestamp <= prev_block.timestamp:
-            print("bad timestamp")
             return False
 
         return True
@@ -112,20 +108,16 @@ class BlockChain:
          f is the previous f'
          f' is the new proof
         '''
-        proof_no = random.randint(0,10000)
+        proof_no = random.randint(0,1000000)
         while BlockChain.verifying_proof(proof_no, last_proof) is False:
             if stop_event.is_set():
                 return
             proof_no += 1
-        print(f'iterations {proof_no}')
         return proof_no
 
     @staticmethod
     def verifying_proof(last_proof, proof):
-        #verifying the proof: does hash(last_proof, proof) is in n numbers from being sutable sudoku sollution
-
         guess = str(f'{last_proof}{proof}'.encode())
-        #guess_hash = hashlib.sha256(guess).hexdigest()
         input_string = guess
         sudoku_hash_value = sudoku_hash(input_string)
         return sudoku_hash_value[:2]=="12"

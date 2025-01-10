@@ -9,7 +9,7 @@
             "type": "debugpy",
             "request": "launch",
             "program": "${file}",
-            "args": "--port 3010",
+            "args": "--port 3010 --password 123",
             "console": "integratedTerminal"
         }
     ]

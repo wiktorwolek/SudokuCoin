@@ -7,12 +7,14 @@ from Crypto.Hash import SHA256
 from Crypto.PublicKey import RSA
 from Crypto.Signature import pkcs1_15
 
-# Global variable to hold connections
+# Global variables to hold connections
 peers = []
 backuppeers = []
 prevmsg = []
+
 # Broadcast function to send a message to all peers
 def broadcast(msg, sender_conn):
+    msg = msg + "\n"  # Add a newline delimiter
     for peer in peers:
         if peer != sender_conn:
             try:
@@ -20,7 +22,8 @@ def broadcast(msg, sender_conn):
             except Exception as ex:
                 peer.close()
                 peers.remove(peer)
-                print(f"[PEER] disconected {peer}")
+                print(f"[PEER] disconnected {peer}")
+
 # Server function to listen for incoming connections
 def start_server(host, port, getInitialMessage, messageRecivedHandler):
     server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -33,43 +36,52 @@ def start_server(host, port, getInitialMessage, messageRecivedHandler):
         if conn.getsockname() in backuppeers:
             del backuppeers[conn.getsockname()]
         peers.append(conn)
-        send_message(conn, getInitialMessage(host,port))
-        threading.Thread(target=handle_peer, args=(conn,messageRecivedHandler)).start()
+        send_message(conn, getInitialMessage(host, port))
+        threading.Thread(target=handle_peer, args=(conn, messageRecivedHandler)).start()
 
 # Function to handle communication with a peer
-def handle_peer(conn,message_recived_handler):
+def handle_peer(conn, message_recived_handler):
+    buffer = ""  # Buffer to hold incomplete messages
     while True:
         try:
-            msg = conn.recv(1000024).decode('utf-8')
-            if msg and msg not in prevmsg:
-                prevmsg.insert(0,msg)
-                message_recived_handler(msg,conn)
-                broadcast(msg, conn)
-        except:
-            print(f"[SERVER] disconnected")
-            conn.close() 
+            data = conn.recv(1024).decode('utf-8')  # Adjust buffer size as needed
+            if not data:
+                break
+            buffer += data  # Append incoming data to the buffer
+            while "\n" in buffer:  # Process complete messages
+                msg, buffer = buffer.split("\n", 1)  # Split at the first delimiter
+                if msg and msg not in prevmsg:
+                    prevmsg.insert(0, msg)
+                    message_recived_handler(msg, conn)
+                    broadcast(msg, conn)
+        except Exception as ex:
+            print(f"[SERVER] disconnected: {ex}")
+            conn.close()
             if backuppeers:
                 backup = backuppeers.pop()
-                connect_to_peer(backup[0],backup[1],message_recived_handler)       
+                connect_to_peer(backup[0], backup[1], message_recived_handler)
             break
-def register_backup(host,port):
+
+# Register a backup peer
+def register_backup(host, port):
     for peer in peers:
-        if peer.getsockname() == [host,port]:
+        if peer.getsockname() == (host, port):
             return
-    backuppeers.insert(1,[host,port])
+    backuppeers.append((host, port))
+
 # Client function to connect to a peer
-def connect_to_peer(host, port,messageRecivedHandler):
+def connect_to_peer(host, port, messageRecivedHandler):
     try:
         print(f"[SERVER] connecting to {host}:{port}")
         client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         client.connect((host, port))
         peers.append(client)
-        threading.Thread(target=handle_peer, args=(client,messageRecivedHandler)).start()
+        threading.Thread(target=handle_peer, args=(client, messageRecivedHandler)).start()
         return client
     except Exception as ex:
         print(f"[SERVER] error connecting to {host}:{port} exception {ex}")
 
 # Function to send messages to peers
 def send_message(conn, msg):
+    msg = msg + "\n"  # Add a newline delimiter
     conn.send(msg.encode('utf-8'))
-
