@@ -53,7 +53,7 @@ class SudokuCoinNode:
             return False  
         
     def sendTransaction(self,msg):
-        signature = self.signMessage(self.user_wallet.private_key,"0"+str(self.user_wallet.public_key)+str(1))
+        signature = self.signMessage(self.user_wallet.private_key,str(self.user_wallet.public_key.decode('utf-8'))+str(self.user_wallet.public_key)+str(msg["quantity"][0]))
         signature_str = b64encode(signature).decode('utf-8')
         if  str(msg["sender"][0]) == str(self.port):
             transaction = {
@@ -82,19 +82,20 @@ class SudokuCoinNode:
             if str(msg["msg_type"][0]) == "tranasaction":
                 print("httpmessage "+str(msg["sender"])+str(msg["recipient"])+str(msg["quantity"]))
                 self.sendTransaction(msg)
+                return ""
 
-            if str(msg["msg_type"][0]) == "balance1":
-                self.user_wallet.show_balance()
+            if str(msg["msg_type"][0]) == "balance":
+                #print(f"Account balance: ", self.get_account_balance(self.user_wallet.public_key.decode("utf-8")))
+                return "Account balance: " + str(self.get_account_balance(self.user_wallet.public_key.decode("utf-8")))
 
-            if str(msg["msg_type"][0]) == "balance2":
-                print(f"Account balance: ", self.get_account_balance(self.user_wallet.public_key.decode("utf-8")))
 
         except Exception as e:
             print('Wrong http message type, caught expectetion:', e)
     
     def verifyTransaction(self, transaction):
         print(f"Transaction verification send from: {transaction['sender'].encode('utf-8')}")
-        if self.verifySignature(transaction['sender'].encode('utf-8'), "0"+str(transaction['sender'].encode('utf-8'))+str(1), transaction['signature']):
+        if self.verifySignature(transaction['sender'].encode('utf-8'), str(transaction['recipient'].encode('utf-8'))+str(transaction['sender'].encode('utf-8'))+str(transaction['quantity']), transaction['signature']):
+            print(transaction['sender'])
             if int(transaction['quantity']) <= self.get_account_balance(transaction['sender']):
                 print("transaction accepted")
                 return True
@@ -126,9 +127,15 @@ class SudokuCoinNode:
                     print("New transaction detected")
                     if self.verifyTransaction(payload):
                         self.add_transaction(payload)
-                        new_block = self.chain.construct_block(proof_no=self.chain.proof_of_work(self.chain.latest_block.proof_no, self.stop_event),
-                                                                prev_hash=self.chain.latest_block.calculate_hash)
-                        broadcast(self.send_new_block(self.host,self.port,self.user_wallet, vars(new_block)),"")
+                        # new_block = self.chain.construct_block(proof_no=self.chain.proof_of_work(self.chain.latest_block.proof_no, self.stop_event),
+                        #                                         prev_hash=self.chain.latest_block.calculate_hash)
+                        self.chain.new_data(
+                        sender=payload['sender'],  
+                        recipient=payload['recipient'],
+                        quantity=payload['quantity'], 
+                        signature = payload['signature'])
+                        
+                        #broadcast(self.send_new_block(self.host,self.port,self.user_wallet, vars(new_block)),"")
                     else:
                         print("False Transaction")
                         pass

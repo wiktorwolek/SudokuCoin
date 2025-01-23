@@ -15,12 +15,14 @@ class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
         self.end_headers()
 
         # Include query parameters in the response
+        
+        msg = self.httpRequestHandler(query_params)
         response = {
-            'message': 'This is a GET request',
-            'query_params': query_params
+            'message': msg,
         }
-        self.httpRequestHandler(query_params)
+
         self.wfile.write(json.dumps(response).encode('utf-8'))
+
 
     def do_POST(self):
         # Read the POST data
