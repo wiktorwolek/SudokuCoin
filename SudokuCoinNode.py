@@ -64,7 +64,6 @@ class SudokuCoinNode:
             }
             self.broadcast_transaction(transaction)
 
-            self.user_wallet.change_wallet_balance(-1)#pomocniecze do testów
         else:
             print("You cannot send not your's coins")
 
@@ -153,6 +152,8 @@ class SudokuCoinNode:
                             return True
                         if self.chain.check_validity(new_block, self.chain.latest_block):
                             print(f"Added new block")
+                            print("latest", self.chain.latest_block.toJSON())
+                            print("new", new_block.toJSON())
                             self.stop_event.set()
                             self.chain.chain.append(new_block)
                             self.miner_thread.join()
@@ -235,7 +236,6 @@ class SudokuCoinNode:
         self.miner_thread = threading.Thread(target=self.handleMinerThread, args=(self.stop_event,))
         self.miner_thread.start()
 
-        self.user_wallet.change_wallet_balance(1)#pomocniecze do testów
 
     def add_transaction(self, transaction):
         self.chain.new_data(
@@ -282,6 +282,7 @@ class SudokuCoinNode:
             print("[SERVER] Initial node")
             self.nodeInitialized = True;
             self.chain.construct_genesis()
+            #print(self.chain.bl)
             self.miner_thread.start()
         if args.peers:
             for peer in args.peers:
